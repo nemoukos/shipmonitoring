@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 const navLinks = [
   {
@@ -39,6 +40,49 @@ function Brand() {
   )
 }
 
+function CurrentDateTime() {
+  const [now, setNow] = useState<Date | null>(null)
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setNow(new Date())
+    }, 0)
+
+    const intervalId = window.setInterval(() => {
+      setNow(new Date())
+    }, 60_000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
+  if (!now) {
+    return null
+  }
+
+  const date = new Intl.DateTimeFormat('el-GR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(now)
+  const time = new Intl.DateTimeFormat('el-GR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(now)
+
+  return (
+    <p className="hidden text-sm text-[var(--muted)] lg:block">
+      {date}
+      <span className="mx-4 text-[var(--border)]">|</span>
+      Ώρα {time}
+    </p>
+  )
+}
+
 // Displays the shared navigation bar across the application.
 export default function Navbar() {
   // Reads the current route so the active link can be highlighted.
@@ -47,7 +91,10 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-[1000] w-full border-b border-[var(--border)] bg-[var(--surface)]/90 shadow-sm backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">
-        <Brand />
+        <div className="flex items-center gap-6">
+          <Brand />
+          <CurrentDateTime />
+        </div>
 
         <div className="flex items-center gap-2 md:gap-4">
           {navLinks.map((link) => (
