@@ -34,22 +34,37 @@ ChartJS.register(
 )
 
 type ChartCardProps = {
+  // Heading displayed above the chart content.
   title: string
+  // Chart.js React element rendered inside the card body.
   children: ReactNode
 }
 
 type YAxisOptions = {
+  // Label displayed beside the y-axis.
   title: string
+  // Optional flag for charts that should begin at zero.
   beginAtZero?: boolean
+  // Optional lower bound for the y-axis.
   min?: number
+  // Optional upper bound for the y-axis.
   max?: number
 }
 
+// Converts imported JSON records into the shared Ship type used by helpers below.
 const typedShips = ships as Ship[]
+
+// Extracts vessel names once so multiple chart datasets can reuse them.
 const shipNames = typedShips.map((ship) => ship.name)
+
+// Initial date range shown when the dashboard first loads.
 const defaultStartDate = '2026-05-01'
 const defaultEndDate = '2026-05-25'
+
+// Milliseconds in one day, reused by date arithmetic helpers.
 const dayInMs = 24 * 60 * 60 * 1000
+
+// Labels used by the custom calendar UI.
 const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const monthLabels = [
   'January',
@@ -122,26 +137,31 @@ function latestValue(values: number[]) {
   return values[values.length - 1]
 }
 
+// Converts a YYYY-MM-DD input value into a UTC Date at midnight.
 function dateFromInput(value: string) {
   return new Date(`${value}T00:00:00Z`)
 }
 
+// Converts a Date back into the YYYY-MM-DD string format expected by inputs.
 function inputFromDate(date: Date) {
   return date.toISOString().slice(0, 10)
 }
 
+// Finds the first day of the month containing the supplied input date.
 function monthStartFromInput(value: string) {
   const date = dateFromInput(value)
 
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
 }
 
+// Moves a month value forward or backward while keeping the day pinned to 1.
 function addMonths(date: Date, months: number) {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1)
   )
 }
 
+// Builds the calendar grid for one month, including leading empty cells.
 function calendarDatesForMonth(monthDate: Date) {
   const year = monthDate.getUTCFullYear()
   const month = monthDate.getUTCMonth()
@@ -157,6 +177,7 @@ function calendarDatesForMonth(monthDate: Date) {
   ]
 }
 
+// Produces every ISO date string between two selected endpoints, inclusive.
 function datesInRange(start: string, end: string) {
   const startTime = dateFromInput(start).getTime()
   const endTime = dateFromInput(end).getTime()
@@ -171,24 +192,28 @@ function datesInRange(start: string, end: string) {
   return dates
 }
 
+// Converts an ISO date into the dd/mm/yyyy format shown to the user.
 function displayDate(value: string) {
   const [year, month, day] = value.split('-')
 
   return `${day}/${month}/${year}`
 }
 
+// Uses a shorter chart label unless the visible range spans multiple years.
 function displayChartDate(value: string, includeYear: boolean) {
   const [year, month, day] = value.split('-')
 
   return includeYear ? `${day}/${month}/${year}` : `${day}/${month}`
 }
 
+// Detects whether chart labels need to include the year for clarity.
 function dateRangeSpansMultipleYears(selectedDates: string[]) {
   const years = new Set(selectedDates.map((date) => date.slice(0, 4)))
 
   return years.size > 1
 }
 
+// Validates a typed dd/mm/yyyy value and converts it back to ISO format.
 function isoDateFromDisplayDate(value: string) {
   const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
 
@@ -212,6 +237,7 @@ function isoDateFromDisplayDate(value: string) {
   return isoDate
 }
 
+// Maps a date to a stable offset from the dashboard's baseline date.
 function dateIndex(value: string) {
   return Math.round(
     (dateFromInput(value).getTime() -
@@ -219,18 +245,22 @@ function dateIndex(value: string) {
   )
 }
 
+// Returns a modulo value that stays positive even for negative inputs.
 function positiveModulo(value: number, divisor: number) {
   return ((value % divisor) + divisor) % divisor
 }
 
+// Reuses chart colors cyclically when there are more vessels than colors.
 function chartColor(index: number) {
   return colors[index % colors.length]
 }
 
+// Reuses market-series colors cyclically for commodity trend lines.
 function marketColor(index: number) {
   return marketColors[index % marketColors.length]
 }
 
+// Generates a plausible metric value for a given date from sample history data.
 function metricValueForDate(
   values: number[],
   date: string,
@@ -245,6 +275,7 @@ function metricValueForDate(
   return baseValue + seasonalDrift + shipOffset
 }
 
+// Derives a synthetic daily CO2 estimate from vessel speed and remaining fuel.
 function co2ValueForDate(ship: Ship, date: string, shipIndex: number) {
   const speed = metricValueForDate(ship.speed, date, shipIndex)
   const fuel = metricValueForDate(ship.fuel, date, shipIndex)
@@ -252,6 +283,7 @@ function co2ValueForDate(ship: Ship, date: string, shipIndex: number) {
   return Math.round((speed * 2.4 + (100 - fuel) * 0.42) * 10) / 10
 }
 
+// Generates a synthetic market-price series using a repeatable wave pattern.
 function oilMarketValueForDate(
   date: string,
   basePrice: number,
@@ -350,6 +382,7 @@ function co2EmissionsDataset(selectedDates: string[]) {
   }
 }
 
+// Builds the line-series data for the oil and fuel market comparison chart.
 function oilMarketDataset(selectedDates: string[]) {
   const includeYear = dateRangeSpansMultipleYears(selectedDates)
   const markets = [
@@ -402,10 +435,19 @@ function DateRangeField({
   value: string
   onChange: (value: string) => void
 }) {
+  // Tracks the whole field so outside clicks can close the popup calendar.
   const fieldRef = useRef<HTMLDivElement | null>(null)
+
+  // Controls whether the custom calendar overlay is visible.
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+
+  // Stores the user-facing dd/mm/yyyy string shown in the text input.
   const [displayValue, setDisplayValue] = useState(displayDate(value))
+
+  // Stores which month the popup calendar is currently displaying.
   const [visibleMonth, setVisibleMonth] = useState(monthStartFromInput(value))
+
+  // Generates the visible date cells for the current month.
   const calendarDates = calendarDatesForMonth(visibleMonth)
 
   useEffect(() => {
@@ -427,6 +469,7 @@ function DateRangeField({
   }, [isCalendarOpen])
 
   function selectDate(date: string) {
+    // Keeps the text input, visible month, popup state, and parent value synchronized.
     setDisplayValue(displayDate(date))
     setVisibleMonth(monthStartFromInput(date))
     setIsCalendarOpen(false)
@@ -533,8 +576,11 @@ function DateRangeField({
 
 // Renders the dashboard charts for speed, fuel, and temperature.
 export default function ShipCharts() {
+  // Stores the currently selected dashboard date range.
   const [startDate, setStartDate] = useState(defaultStartDate)
   const [endDate, setEndDate] = useState(defaultEndDate)
+
+  // Recomputes the list of visible dates only when either endpoint changes.
   const selectedDates = useMemo(
     () => datesInRange(startDate, endDate),
     [startDate, endDate]

@@ -23,14 +23,19 @@ import 'leaflet/dist/leaflet.css'
 import ships from '@/data/ships.json'
 import type { Ship } from '@/types/ship'
 
+// Narrows imported JSON data to the shared vessel type used throughout the map.
 const typedShips = ships as Ship[]
 
+// Initial world-map view shown when the map first loads.
 const mapCenter: [number, number] = [22, 25]
+
+// Prevents the user from panning outside the normal latitude/longitude range.
 const mapBounds: [[number, number], [number, number]] = [
   [-85, -180],
   [85, 180],
 ]
 
+// Zoom level where ship markers become larger and more detailed.
 const detailedShipZoom = 11
 const smallShipSize = {
   width: 40,
@@ -55,7 +60,9 @@ const routeColors = [
 ]
 
 type MapPoint = {
+  // Human-readable label shown in popups and tooltips.
   name: string
+  // Latitude/longitude pair understood by Leaflet.
   position: [number, number]
 }
 
@@ -64,6 +71,7 @@ type WeatherPoint = MapPoint & {
   waves: string
 }
 
+// Static reference points used for route endpoints and optional map overlays.
 const portPoints: MapPoint[] = [
   { name: 'Port of Houston', position: [29.735, -95.265] },
   { name: 'Port of Rotterdam', position: [51.95, 4.14] },
@@ -77,12 +85,14 @@ const portPoints: MapPoint[] = [
   { name: 'Port of Gibraltar', position: [36.14, -5.353] },
 ]
 
+// Example circular warning area displayed by the danger-zone layer.
 const highTrafficZone = {
   name: 'High traffic zone',
   center: [37.9, 23.9] as [number, number],
   radius: 65000,
 }
 
+// Example polygon warning area displayed by the danger-zone layer.
 const restrictedOperationsArea = {
   name: 'Restricted operations area',
   positions: [
@@ -93,6 +103,7 @@ const restrictedOperationsArea = {
   ] as [number, number][],
 }
 
+// Sample weather observations used by the optional weather overlay.
 const weatherPoints: WeatherPoint[] = [
   {
     name: 'Aegean weather',
@@ -114,6 +125,7 @@ const weatherPoints: WeatherPoint[] = [
   },
 ]
 
+// Example geofences used to demonstrate monitored operating areas.
 const geofences = [
   {
     name: 'Piraeus approach geofence',
@@ -139,10 +151,12 @@ function latestValue(values: number[]) {
   return values[values.length - 1]
 }
 
+// Chooses marker dimensions based on the current zoom level.
 function shipSizeForZoom(zoom: number) {
   return zoom >= detailedShipZoom ? largeShipSize : smallShipSize
 }
 
+// Produces the inline SVG used as a custom Leaflet vessel icon.
 function shipSvg(width: number, height: number) {
   return `
     <div style="
@@ -166,6 +180,7 @@ function shipSvg(width: number, height: number) {
   `
 }
 
+// Wraps the SVG markup in a Leaflet div icon configuration object.
 function createShipIcon(zoom: number) {
   const { width, height } = shipSizeForZoom(zoom)
 
@@ -178,10 +193,12 @@ function createShipIcon(zoom: number) {
   })
 }
 
+// Finds a configured port position by its display name.
 function portPositionByName(name: string) {
   return portPoints.find((port) => port.name === name)?.position
 }
 
+// Creates a simple three-point route from origin to current position to destination.
 function routeForShip(ship: Ship) {
   const origin = portPositionByName(ship.origin)
   const destination = portPositionByName(ship.destination)
@@ -190,6 +207,7 @@ function routeForShip(ship: Ship) {
   return [origin, current, destination].filter(Boolean) as [number, number][]
 }
 
+// Tracks the current Leaflet zoom level so icon size can respond to map changes.
 function useCurrentZoom() {
   const map = useMapEvents({
     zoomend() {
@@ -201,6 +219,7 @@ function useCurrentZoom() {
   return zoom
 }
 
+// Renders the small popup shown when a user clicks a ship marker.
 function ShipPopup({
   ship,
 }: {
@@ -223,6 +242,7 @@ function ShipPopup({
   )
 }
 
+// Renders all vessel markers and manages which one is currently selected.
 function ShipMarkers() {
   const zoom = useCurrentZoom()
   const shipIcon = createShipIcon(zoom)
@@ -252,6 +272,7 @@ function ShipMarkers() {
   )
 }
 
+// Draws one dashed voyage route for each vessel.
 function ShipRoutes() {
   return (
     <LayerGroup>
@@ -272,6 +293,7 @@ function ShipRoutes() {
   )
 }
 
+// Renders alert regions that represent traffic or operational restrictions.
 function DangerZones() {
   return (
     <LayerGroup>
@@ -303,6 +325,7 @@ function DangerZones() {
   )
 }
 
+// Renders sample weather markers with wind and wave information.
 function WeatherLayer() {
   return (
     <LayerGroup>
@@ -332,6 +355,7 @@ function WeatherLayer() {
   )
 }
 
+// Renders named port markers used as reference points on the map.
 function PortsLayer() {
   return (
     <LayerGroup>
@@ -355,6 +379,7 @@ function PortsLayer() {
   )
 }
 
+// Draws sample AIS heading lines for each vessel.
 function AisLines() {
   return (
     <LayerGroup>
@@ -378,6 +403,7 @@ function AisLines() {
   )
 }
 
+// Renders the configured geofence polygons.
 function GeofencesLayer() {
   return (
     <LayerGroup>
@@ -399,6 +425,7 @@ function GeofencesLayer() {
   )
 }
 
+// Flies the map toward the vessel the user most recently selected.
 function SelectedShipFocus({
   ship,
 }: {
@@ -419,6 +446,7 @@ function SelectedShipFocus({
   return null
 }
 
+// Reusable compact value card shown inside the selected-vessel overlay.
 function MetricPill({
   label,
   value,
@@ -439,6 +467,7 @@ function MetricPill({
   )
 }
 
+// Shows richer vessel details and the link to the 3D view after selection.
 function ShipInfoOverlay({
   ship,
   onClose,
@@ -525,6 +554,7 @@ function ShipInfoOverlay({
   )
 }
 
+// Composes the complete interactive Leaflet map and all optional layers.
 export default function ShipMap() {
   return (
     <div className="relative h-[90vh] w-full overflow-hidden">

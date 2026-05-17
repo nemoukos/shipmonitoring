@@ -1,8 +1,13 @@
-/* Loads Tailwind CSS utilities and Leaflet's default map styles. */
+/* Loads Tailwind CSS utilities used throughout the application. */
 @import "tailwindcss";
+
+/* Loads Leaflet's default stylesheet so the map controls and tiles render correctly. */
 @import "leaflet/dist/leaflet.css";
 
-/* Default light theme color variables used across the app. */
+/* 
+  Defines the default light-theme design tokens.
+  Components read these variables so colors can be changed centrally.
+*/
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -13,7 +18,10 @@
   --accent: #0891b2;
 }
 
-/* Exposes app theme variables to Tailwind's inline theme system. */
+/* 
+  Exposes selected CSS variables to Tailwind's inline theme system.
+  This lets utility classes reuse the same application-level color tokens.
+*/
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -21,7 +29,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Dark theme overrides applied by the root layout. */
+/* 
+  Overrides the default variables when the root layout selects dark mode.
+  Because components use variables, the whole app updates without rewriting each class.
+*/
 [data-theme="dark"] {
   --background: #07111f;
   --foreground: #f8fafc;
@@ -32,14 +43,14 @@
   --accent: #22d3ee;
 }
 
-/* Base page styles shared by every route. */
+/* Applies the shared document background, text color, and default font family. */
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Keeps links and buttons aligned with the current theme text color. */
+/* Makes links and buttons inherit the surrounding text color instead of browser defaults. */
 a,
 button {
   color: inherit;
