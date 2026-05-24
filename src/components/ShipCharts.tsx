@@ -18,7 +18,6 @@ import {
   Line,
 } from 'react-chartjs-2'
 
-import ships from '@/data/ships.json'
 import type { Ship } from '@/types/ship'
 
 // Registers the Chart.js modules required by the chart components below.
@@ -50,12 +49,6 @@ type YAxisOptions = {
   // Optional upper bound for the y-axis.
   max?: number
 }
-
-// Converts imported JSON records into the shared Ship type used by helpers below.
-const typedShips = ships as Ship[]
-
-// Extracts vessel names once so multiple chart datasets can reuse them.
-const shipNames = typedShips.map((ship) => ship.name)
 
 // Initial date range shown when the dashboard first loads.
 const defaultStartDate = '2026-05-01'
@@ -325,9 +318,11 @@ function chartOptions({
 // Creates one bar dataset from the latest value of a ship metric.
 function latestMetricDataset(
   label: string,
+  ships: Ship[],
   getValues: (ship: Ship) => number[],
   selectedDates: string[]
 ) {
+  const shipNames = ships.map((ship) => ship.name)
   const selectedDate =
     selectedDates[selectedDates.length - 1] ?? defaultStartDate
 
@@ -336,7 +331,7 @@ function latestMetricDataset(
     datasets: [
       {
         label,
-        data: typedShips.map((ship, index) =>
+        data: ships.map((ship, index) =>
           metricValueForDate(getValues(ship), selectedDate, index)
         ),
         backgroundColor: colors,
@@ -348,6 +343,7 @@ function latestMetricDataset(
 
 // Creates one line per ship for a metric measured throughout the day.
 function trendDataset(
+  ships: Ship[],
   getValues: (ship: Ship) => number[],
   selectedDates: string[]
 ) {
@@ -355,7 +351,7 @@ function trendDataset(
 
   return {
     labels: selectedDates.map((date) => displayChartDate(date, includeYear)),
-    datasets: typedShips.map((ship, index) => ({
+    datasets: ships.map((ship, index) => ({
       label: ship.name,
       data: selectedDates.map((date) =>
         metricValueForDate(getValues(ship), date, index)
@@ -367,12 +363,12 @@ function trendDataset(
   }
 }
 
-function co2EmissionsDataset(selectedDates: string[]) {
+function co2EmissionsDataset(ships: Ship[], selectedDates: string[]) {
   const includeYear = dateRangeSpansMultipleYears(selectedDates)
 
   return {
     labels: selectedDates.map((date) => displayChartDate(date, includeYear)),
-    datasets: typedShips.map((ship, index) => ({
+    datasets: ships.map((ship, index) => ({
       label: ship.name,
       data: selectedDates.map((date) => co2ValueForDate(ship, date, index)),
       borderColor: chartColor(index),
@@ -575,7 +571,7 @@ function DateRangeField({
 }
 
 // Renders the dashboard charts for speed, fuel, and temperature.
-export default function ShipCharts() {
+export default function ShipCharts({ ships }: { ships: Ship[] }) {
   // Stores the currently selected dashboard date range.
   const [startDate, setStartDate] = useState(defaultStartDate)
   const [endDate, setEndDate] = useState(defaultEndDate)
@@ -622,6 +618,7 @@ export default function ShipCharts() {
           <Bar
             data={latestMetricDataset(
               'Knots',
+              ships,
               (ship) => ship.speed,
               selectedDates
             )}
@@ -636,6 +633,7 @@ export default function ShipCharts() {
           <Bar
             data={latestMetricDataset(
               'Fuel %',
+              ships,
               (ship) => ship.fuel,
               selectedDates
             )}
@@ -649,7 +647,7 @@ export default function ShipCharts() {
 
         <ChartCard title="Fuel Trend">
           <Line
-            data={trendDataset((ship) => ship.fuel, selectedDates)}
+            data={trendDataset(ships, (ship) => ship.fuel, selectedDates)}
             options={chartOptions({
               title: '%',
               min: 0,
@@ -660,7 +658,7 @@ export default function ShipCharts() {
 
         <ChartCard title="Temperature Trend">
           <Line
-            data={trendDataset((ship) => ship.temperature, selectedDates)}
+            data={trendDataset(ships, (ship) => ship.temperature, selectedDates)}
             options={chartOptions({
               title: 'Celsius',
             })}
@@ -669,7 +667,7 @@ export default function ShipCharts() {
 
         <ChartCard title="CO2 Emissions">
           <Line
-            data={co2EmissionsDataset(selectedDates)}
+            data={co2EmissionsDataset(ships, selectedDates)}
             options={chartOptions({
               title: 'tons / day',
               beginAtZero: true,

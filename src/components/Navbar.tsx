@@ -4,7 +4,7 @@
 import Link from 'next/link'
 
 // Reads the current route so the navbar can highlight the active page.
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 // React hooks are used for the live date/time display.
 import { useEffect, useState } from 'react'
@@ -114,6 +114,15 @@ function CurrentDateTime() {
 export default function Navbar() {
   // Reads the current route so the active link can be highlighted.
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+    })
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <nav className="sticky top-0 z-[1000] w-full border-b border-[var(--border)] bg-[var(--surface)]/90 shadow-sm backdrop-blur">
@@ -134,6 +143,20 @@ export default function Navbar() {
               {link.name}
             </Link>
           ))}
+
+          {pathname === '/login' ? (
+            <Link href="/login" className={linkClassName(true)}>
+              Login
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className={`${baseLinkClass} ${inactiveLinkClass}`}
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          )}
         </div>
       </div>
     </nav>

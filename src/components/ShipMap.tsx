@@ -20,11 +20,7 @@ import {
 } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
-import ships from '@/data/ships.json'
 import type { Ship } from '@/types/ship'
-
-// Narrows imported JSON data to the shared vessel type used throughout the map.
-const typedShips = ships as Ship[]
 
 // Initial world-map view shown when the map first loads.
 const mapCenter: [number, number] = [22, 25]
@@ -243,14 +239,14 @@ function ShipPopup({
 }
 
 // Renders all vessel markers and manages which one is currently selected.
-function ShipMarkers() {
+function ShipMarkers({ ships }: { ships: Ship[] }) {
   const zoom = useCurrentZoom()
   const shipIcon = createShipIcon(zoom)
   const [selectedShip, setSelectedShip] = useState<Ship | null>(null)
 
   return (
     <LayerGroup>
-      {typedShips.map((ship) => (
+      {ships.map((ship) => (
         <Marker
           key={ship.id}
           position={[ship.lat, ship.lng]}
@@ -273,10 +269,10 @@ function ShipMarkers() {
 }
 
 // Draws one dashed voyage route for each vessel.
-function ShipRoutes() {
+function ShipRoutes({ ships }: { ships: Ship[] }) {
   return (
     <LayerGroup>
-      {typedShips.map((ship, index) => (
+      {ships.map((ship, index) => (
         <Polyline
           key={ship.id}
           pathOptions={{
@@ -380,10 +376,10 @@ function PortsLayer() {
 }
 
 // Draws sample AIS heading lines for each vessel.
-function AisLines() {
+function AisLines({ ships }: { ships: Ship[] }) {
   return (
     <LayerGroup>
-      {typedShips.map((ship, index) => (
+      {ships.map((ship, index) => (
         <Polyline
           key={ship.id}
           pathOptions={{
@@ -555,7 +551,7 @@ function ShipInfoOverlay({
 }
 
 // Composes the complete interactive Leaflet map and all optional layers.
-export default function ShipMap() {
+export default function ShipMap({ ships }: { ships: Ship[] }) {
   return (
     <div className="relative h-[90vh] w-full overflow-hidden">
       <MapContainer
@@ -592,11 +588,11 @@ export default function ShipMap() {
           </LayersControl.BaseLayer>
 
           <LayersControl.Overlay checked name="Ships">
-            <ShipMarkers />
+            <ShipMarkers ships={ships} />
           </LayersControl.Overlay>
 
           <LayersControl.Overlay checked name="Ship routes">
-            <ShipRoutes />
+            <ShipRoutes ships={ships} />
           </LayersControl.Overlay>
 
           <LayersControl.Overlay name="Danger zones">
@@ -612,7 +608,7 @@ export default function ShipMap() {
           </LayersControl.Overlay>
 
           <LayersControl.Overlay name="AIS lines">
-            <AisLines />
+            <AisLines ships={ships} />
           </LayersControl.Overlay>
 
           <LayersControl.Overlay name="Geofences">

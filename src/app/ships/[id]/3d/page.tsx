@@ -7,14 +7,7 @@ import { notFound } from 'next/navigation'
 // Imports the browser-only 3D viewer wrapper.
 import Ship3DViewerClient from '@/components/Ship3DViewerClient'
 
-// Loads the local vessel dataset used to resolve route ids into ship records.
-import ships from '@/data/ships.json'
-
-// Imports the shared vessel type used across the application.
-import type { Ship } from '@/types/ship'
-
-// Narrows the imported JSON data to the Ship structure expected by this route.
-const typedShips = ships as Ship[]
+import { getShipById } from '@/lib/api'
 
 // Describes the dynamic route params received by the page component.
 type Ship3DPageProps = {
@@ -25,20 +18,12 @@ type Ship3DPageProps = {
   }>
 }
 
-// Pre-generates one static route entry for every vessel in the dataset.
-export function generateStaticParams() {
-  return typedShips.map((ship) => ({
-    id: String(ship.id),
-  }))
-}
-
 // Renders the dynamic 3D vessel page for one selected ship.
 export default async function Ship3DPage({ params }: Ship3DPageProps) {
   // Waits for the route parameters and extracts the vessel id from the URL.
   const { id } = await params
 
-  // Looks up the matching vessel record from the local dataset.
-  const ship = typedShips.find((currentShip) => String(currentShip.id) === id)
+  const ship = await getShipById(id)
 
   if (!ship) {
     // Falls back to the route-level 404 page when the id is unknown.
