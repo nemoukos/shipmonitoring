@@ -9,6 +9,8 @@ import { usePathname, useRouter } from 'next/navigation'
 // React hooks are used for the live date/time display.
 import { useEffect, useState } from 'react'
 
+import { useAuth } from '@/components/AuthProvider'
+
 // Central list of the routes shown in the navigation bar.
 const navLinks = [
   {
@@ -22,6 +24,10 @@ const navLinks = [
   {
     name: 'Dashboard',
     path: '/dashboard',
+  },
+  {
+    name: 'Alerts',
+    path: '/alerts',
   },
   {
     // Direct-entry route that opens the standalone 3D vessel gallery.
@@ -115,11 +121,10 @@ export default function Navbar() {
   // Reads the current route so the active link can be highlighted.
   const pathname = usePathname()
   const router = useRouter()
+  const { isReady, logout, token } = useAuth()
 
-  async function handleLogout() {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-    })
+  function handleLogout() {
+    logout()
     router.push('/login')
     router.refresh()
   }
@@ -144,7 +149,7 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {pathname === '/login' ? (
+          {pathname === '/login' || !isReady || !token ? (
             <Link href="/login" className={linkClassName(true)}>
               Login
             </Link>

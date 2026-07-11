@@ -3,9 +3,13 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
+import { useAuth } from '@/components/AuthProvider'
+import type { ApiSession } from '@/lib/clientApi'
+
 export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { login } = useAuth()
   const nextPath = searchParams.get('next') ?? '/dashboard'
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -35,6 +39,9 @@ export default function LoginForm() {
       return
     }
 
+    const session = (await response.json()) as ApiSession
+
+    login(session)
     router.push(nextPath)
     router.refresh()
   }

@@ -1,8 +1,21 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { hashPassword } from './auth.mjs'
 import { serializeShip } from './db.mjs'
+
+const baselineDate = new Date('2026-05-01T00:00:00Z')
+const dayInMs = 24 * 60 * 60 * 1000
+const thresholds = [
+  { metric: 'speed', label: 'Speed', unit: 'kn', min_value: 8, max_value: 18 },
+  { metric: 'fuel', label: 'Fuel', unit: '%', min_value: 30, max_value: 100 },
+  {
+    metric: 'temperature',
+    label: 'Temperature',
+    unit: 'C',
+    min_value: 0,
+    max_value: 44,
+  },
+]
 
 // Loads the existing static ship data.
 // This lets the new API reuse the same ship dataset that the frontend already
@@ -13,7 +26,12 @@ function readSeedShips() {
   return JSON.parse(fs.readFileSync(shipsPath, 'utf8'))
 }
 
+function measurementDate(index) {
+  return new Date(baselineDate.getTime() + index * dayInMs).toISOString()
+}
+
 export async function seedDatabase(db) {
+  const seedShips = readSeedShips()
   const shipCount = db.prepare('SELECT COUNT(*) AS count FROM ships').get().count
 
   // Insert the initial ships only when the table is empty.
@@ -24,39 +42,42 @@ export async function seedDatabase(db) {
       VALUES (:id, :name, :image, :origin, :destination, :lat, :lng, :speed, :fuel, :temperature)
     `)
 
-    for (const ship of readSeedShips()) {
+    for (const ship of seedShips) {
       insertShip.run(serializeShip(ship))
     }
   }
 
-  const email = process.env.ADMIN_EMAIL
-  const password = process.env.ADMIN_PASSWORD
+  const thresholdCount = db
+    .prepare('SELECT COUNT(*) AS count FROM measurement_thresholds')
+    .get().count
 
-  // The protected endpoints need an admin account before anyone can log in.
-  // Credentials come from .env so real passwords are never committed to the repo.
-  if (!email || !password) {
-    throw new Error('Set ADMIN_EMAIL and ADMIN_PASSWORD in .env before starting the API.')
+  if (thresholdCount === 0) {
+    const insertThreshold = db.prepare(`
+      INSERT INTO measurement_thresholds (metric, label, unit, min_value, max_value)
+      VALUES (:metric, :label, :unit, :min_value, :max_value)
+    `)
+
+    for (const threshold of thresholds) {
+      insertThreshold.run(threshold)
+    }
   }
 
-  const passwordHash = await hashPassword(password)
-  const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
+  const measurementCount = db
+    .prepare('SELECT COUNT(*) AS count FROM ship_measurements')
+    .get().count
 
-  // Create the admin user on the first run.
-  // On later runs, update the password hash so changing ADMIN_PASSWORD in .env
-  // immediately changes the login password after restarting the API.
-  if (!existingUser) {
-    db.prepare('INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)').run(
-      email,
-      passwordHash,
-      'Admin'
-    )
+  if (measurementCount === 0) {
+    const insertMeasurement = db.prepare(`
+      INSERT INTO ship_measurements (ship_id, metric, measured_at, value)
+      VALUES (?, ?, ?, ?)
+    `)
 
-    return
+    for (const ship of seedShips) {
+      for (const metric of ['speed', 'fuel', 'temperature']) {
+        for (const [index, value] of ship[metric].entries()) {
+          insertMeasurement.run(ship.id, metric, measurementDate(index), value)
+        }
+      }
+    }
   }
-
-  db.prepare('UPDATE users SET password_hash = ?, name = ? WHERE email = ?').run(
-    passwordHash,
-    'Admin',
-    email
-  )
 }

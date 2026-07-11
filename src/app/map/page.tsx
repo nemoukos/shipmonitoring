@@ -1,16 +1,14 @@
-// Imports the browser-only map wrapper used on the map page.
-import ShipMapClient from '@/components/ShipMapClient'
-import { getShips } from '@/lib/api'
+import MapView from '@/components/MapView'
+import ProtectedRoute from '@/components/ProtectedRoute'
 
 // Renders the "/map" route.
-export default async function MapPage() {
-  const ships = await getShips()
-
+export default function MapPage() {
   return (
     // Uses a semantic main region for the interactive map page content.
     <main>
-      {/* Loads the map only on the client because Leaflet needs browser APIs. */}
-      <ShipMapClient ships={ships} />
+      <ProtectedRoute>
+        <MapView />
+      </ProtectedRoute>
     </main>
   )
 }

@@ -39,6 +39,24 @@ export function openDatabase() {
       fuel TEXT NOT NULL,
       temperature TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS measurement_thresholds (
+      metric TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      unit TEXT NOT NULL,
+      min_value REAL NOT NULL,
+      max_value REAL NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ship_measurements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ship_id INTEGER NOT NULL,
+      metric TEXT NOT NULL,
+      measured_at TEXT NOT NULL,
+      value REAL NOT NULL,
+      FOREIGN KEY (ship_id) REFERENCES ships(id),
+      FOREIGN KEY (metric) REFERENCES measurement_thresholds(metric)
+    );
   `)
 
   return db
