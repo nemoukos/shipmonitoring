@@ -16,6 +16,11 @@ const thresholds = [
     max_value: 44,
   },
 ]
+const belowLimitMeasurements = [
+  { shipId: 2, metric: 'fuel', measuredAt: '2026-05-07T00:00:00.000Z', value: 24 },
+  { shipId: 7, metric: 'speed', measuredAt: '2026-05-07T00:00:00.000Z', value: 6 },
+  { shipId: 9, metric: 'fuel', measuredAt: '2026-05-08T00:00:00.000Z', value: 18 },
+]
 
 // Loads the existing static ship data.
 // This lets the new API reuse the same ship dataset that the frontend already
@@ -78,6 +83,31 @@ export async function seedDatabase(db) {
           insertMeasurement.run(ship.id, metric, measurementDate(index), value)
         }
       }
+    }
+  }
+
+  const belowLimitCount = db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM ship_measurements sm
+       JOIN measurement_thresholds mt ON mt.metric = sm.metric
+       WHERE sm.value < mt.min_value`
+    )
+    .get().count
+
+  if (belowLimitCount === 0) {
+    const insertMeasurement = db.prepare(`
+      INSERT INTO ship_measurements (ship_id, metric, measured_at, value)
+      VALUES (?, ?, ?, ?)
+    `)
+
+    for (const measurement of belowLimitMeasurements) {
+      insertMeasurement.run(
+        measurement.shipId,
+        measurement.metric,
+        measurement.measuredAt,
+        measurement.value
+      )
     }
   }
 }

@@ -9,22 +9,9 @@ import { seedDatabase } from './seed.mjs'
 const app = express()
 const db = openDatabase()
 const port = Number(process.env.API_PORT ?? 4000)
-const cookieName = process.env.SESSION_COOKIE_NAME ?? 'ship_session'
 const sessionDurationMs = 1000 * 60 * 60 * 8
 
 app.use(express.json())
-
-// Reads one cookie value from the raw Cookie header.
-// Express does not parse cookies by itself here, so this helper converts
-// "name=value; other=value" into an object and returns the requested cookie.
-function readCookie(header, name) {
-  return Object.fromEntries(
-    String(header ?? '')
-      .split(';')
-      .map((cookie) => cookie.trim().split('='))
-      .filter(([key, value]) => key && value)
-  )[name]
-}
 
 function readBearerToken(header) {
   const [scheme, token] = String(header ?? '').split(' ')
@@ -36,9 +23,7 @@ function readBearerToken(header) {
 // It reads the Bearer token, verifies the signed token, and attaches the
 // logged-in user to req.user so route handlers can trust the request.
 function requireAuth(req, res, next) {
-  const token =
-    readBearerToken(req.headers.authorization) ??
-    readCookie(req.headers.cookie, cookieName)
+  const token = readBearerToken(req.headers.authorization)
   const session = verifyToken(token)
 
   if (!session) {

@@ -17,6 +17,106 @@ function displayDate(value: string) {
   }).format(new Date(value))
 }
 
+function thresholdState(alert: ShipAlert) {
+  if (alert.value < alert.min_value) {
+    return 'below'
+  }
+
+  if (alert.value > alert.max_value) {
+    return 'above'
+  }
+
+  return 'inside'
+}
+
+function thresholdBarColor(state: 'below' | 'inside' | 'above') {
+  if (state === 'below') {
+    return 'bg-sky-400'
+  }
+
+  if (state === 'above') {
+    return 'bg-red-400'
+  }
+
+  return 'bg-emerald-400'
+}
+
+function thresholdMarkerPosition(alert: ShipAlert) {
+  const minDomain = Math.min(alert.value, alert.min_value)
+  const maxDomain = Math.max(alert.value, alert.max_value)
+  const range = maxDomain - minDomain
+
+  if (range <= 0) {
+    return 0
+  }
+
+  return ((alert.value - minDomain) / range) * 100
+}
+
+function limitPosition(value: number, alert: ShipAlert) {
+  const minDomain = Math.min(alert.value, alert.min_value)
+  const maxDomain = Math.max(alert.value, alert.max_value)
+  const range = maxDomain - minDomain
+
+  if (range <= 0) {
+    return 0
+  }
+
+  return ((value - minDomain) / range) * 100
+}
+
+function LimitBar({ alert }: { alert: ShipAlert }) {
+  const state = thresholdState(alert)
+  const markerPosition = thresholdMarkerPosition(alert)
+  const minPosition = limitPosition(alert.min_value, alert)
+  const maxPosition = limitPosition(alert.max_value, alert)
+  const outOfRangeColor = thresholdBarColor(state)
+
+  return (
+    <div className="grid gap-2">
+      <div className="relative h-6">
+        <div className="absolute inset-0 overflow-hidden rounded-full bg-slate-800">
+          <div
+            className={`absolute inset-y-0 left-0 ${outOfRangeColor}`}
+            style={{ width: `${minPosition}%` }}
+          />
+          <div
+            className="absolute inset-y-0 bg-emerald-400"
+            style={{
+              left: `${minPosition}%`,
+              width: `${maxPosition - minPosition}%`,
+            }}
+          />
+          <div
+            className={`absolute inset-y-0 right-0 ${outOfRangeColor}`}
+            style={{ width: `${100 - maxPosition}%` }}
+          />
+        </div>
+        <span
+          className="absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-slate-950/70 px-1 text-[11px] font-semibold text-white"
+          style={{ left: `${minPosition}%` }}
+        >
+          {alert.min_value} {alert.unit}
+        </span>
+        <span
+          className="absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-slate-950/70 px-1 text-[11px] font-semibold text-white"
+          style={{ left: `${maxPosition}%` }}
+        >
+          {alert.max_value} {alert.unit}
+        </span>
+        <span
+          className="absolute top-1/2 z-20 h-7 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow"
+          style={{ left: `${markerPosition}%` }}
+        />
+      </div>
+
+      <p className="text-xs text-slate-400">
+        Value: {alert.value} {alert.unit}
+      </p>
+    </div>
+  )
+}
+
 export default function AlertsView() {
   const { token } = useAuth()
   const router = useRouter()
@@ -105,9 +205,7 @@ export default function AlertsView() {
               <span className="font-bold text-red-200">
                 {alert.value} {alert.unit}
               </span>
-              <span>
-                {alert.min_value} - {alert.max_value} {alert.unit}
-              </span>
+              <LimitBar alert={alert} />
               <span className="text-slate-300">{displayDate(alert.measured_at)}</span>
             </div>
           ))}

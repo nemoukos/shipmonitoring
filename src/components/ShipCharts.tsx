@@ -250,7 +250,7 @@ export default function ShipCharts() {
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Measurements from SQLite for {data.selectedShip.name}
+            Measurements for {data.selectedShip.name}
           </p>
         </div>
 
